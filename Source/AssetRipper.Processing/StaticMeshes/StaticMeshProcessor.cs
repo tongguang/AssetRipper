@@ -461,6 +461,7 @@ namespace AssetRipper.Processing.StaticMeshes
 					SetUnlessNull(tangents, newIndex, combinedMeshData.Tangents, combinedIndex);
 					SetUnlessNull(colors, newIndex, combinedMeshData.Colors, combinedIndex);
 					SetUnlessNull(skin, newIndex, combinedMeshData.Skin, combinedIndex);
+					SetUnlessNull(uv0, newIndex, combinedMeshData.UV0, combinedIndex);
 					SetUnlessNull(uv1, newIndex, combinedMeshData.UV1, combinedIndex);
 					SetUnlessNull(uv2, newIndex, combinedMeshData.UV2, combinedIndex);
 					SetUnlessNull(uv3, newIndex, combinedMeshData.UV3, combinedIndex);
@@ -578,6 +579,8 @@ namespace AssetRipper.Processing.StaticMeshes
 		#region Approximate Equality
 		private static bool AreApproximatelyEqual(MeshData instanceMeshData, MeshData otherMeshData)
 		{
+			// todo 临时处理
+			return false;
 			if (!AreSameLength(instanceMeshData.Vertices, otherMeshData.Vertices)
 				|| !AreSameLength(instanceMeshData.Normals, otherMeshData.Normals)
 				|| !AreSameLength(instanceMeshData.Tangents, otherMeshData.Tangents)

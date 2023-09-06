@@ -58,7 +58,7 @@ namespace AssetRipper.Export.UnityProjects.Configuration
 			TerrainExportMode = TerrainExportMode.Yaml;
 			TextExportMode = TextExportMode.Parse;
 			EnablePrefabOutlining = false;
-			EnableStaticMeshSeparation = false;
+			EnableStaticMeshSeparation = true;
 			IgnoreEngineAssets = false;
 		}
 

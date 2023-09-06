@@ -15,6 +15,7 @@ using AssetRipper.IO.Files.SerializedFiles.Parser.TypeTrees;
 using AssetRipper.SourceGenerated;
 using AssetRipper.SourceGenerated.Classes.ClassID_114;
 using AssetRipper.SourceGenerated.Classes.ClassID_28;
+using AssetRipper.SourceGenerated.Classes.ClassID_89;
 using AssetRipper.SourceGenerated.Subclasses.AABB;
 using AssetRipper.SourceGenerated.Subclasses.AABBInt;
 using AssetRipper.SourceGenerated.Subclasses.AnimationCurve_Single;
@@ -128,6 +129,11 @@ namespace AssetRipper.Import.AssetCreation
 						ReadExtraTextureFields(texture, ref reader);
 						replaceWithUnreadableObject = false;
 					}
+					else if (reader.Length - reader.Position == 96 && asset is ICubemap cubemap)
+					{
+						ReadExtraCubemapFields(cubemap, ref reader);
+						replaceWithUnreadableObject = false;
+					}
 					else
 					{
 						LogIncorrectNumberOfBytesRead(asset, ref reader);
@@ -181,6 +187,12 @@ namespace AssetRipper.Import.AssetCreation
 			reader.ReadUInt32();
 			reader.ReadUInt32();
 			Logger.Warning(LogCategory.Import, $"Texture {texture.Name} had an extra 24 bytes, which were assumed to be non-standard Chinese fields.");
+		}
+
+		private static void ReadExtraCubemapFields(ICubemap cubemap, ref EndianSpanReader reader)
+		{
+			for (int i = 0; i < 24; i++) { reader.ReadInt32(); }
+			//Logger.Warning($"Cubemap {cubemap.Name} had an extra 96 bytes, which were assumed to be non-standard Chinese fields.");
 		}
 
 		private static void LogMonoBehaviorReadException(IMonoBehaviour monoBehaviour, Exception ex)

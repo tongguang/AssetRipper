@@ -26,6 +26,8 @@ public abstract class Bundle : IDisposable
 	/// </summary>
 	public IReadOnlyList<AssetCollection> Collections => collections;
 	private readonly List<AssetCollection> collections = new();
+	public readonly Dictionary<string, AssetCollection> nameToCollection = new();
+	public bool isNeedRebuildNameToCollection = false;
 	/// <summary>
 	/// The list of child <see cref="Bundle"/>s in this Bundle.
 	/// </summary>
@@ -142,7 +144,18 @@ public abstract class Bundle : IDisposable
 		static AssetCollection? TryResolveFromCollections(Bundle currentBundle, string name)
 		{
 			//Uniqueness is not guaranteed because of asset bundle variants
-			return currentBundle.Collections.FirstOrDefault(c => c.Name == name);
+			//return currentBundle.Collections.FirstOrDefault(c => c.Name == name);
+			if (currentBundle.isNeedRebuildNameToCollection)
+			{
+				currentBundle.nameToCollection.Clear();
+				foreach (var item in currentBundle.Collections)
+				{
+					currentBundle.nameToCollection.Add(item.Name, item);
+				}
+				currentBundle.isNeedRebuildNameToCollection = false;
+			}
+			currentBundle.nameToCollection.TryGetValue(name, out var result);
+			return result;
 		}
 
 		/// <summary>
@@ -247,6 +260,7 @@ public abstract class Bundle : IDisposable
 		else if (IsCompatibleCollection(collection))
 		{
 			collections.Add(collection);
+			isNeedRebuildNameToCollection = true;
 		}
 		else
 		{

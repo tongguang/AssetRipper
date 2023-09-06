@@ -42,11 +42,11 @@ namespace AssetRipper.Export.UnityProjects
 			{
 				root.Add(FolderAssetName, true);
 			}
-			if (HasLicenseData)
-			{
-				root.Add(TimeCreatedName, CurrentTick);
-				root.Add(LicenseTypeName, "Free");
-			}
+			//if (HasLicenseData)
+			//{
+			//	root.Add(TimeCreatedName, CurrentTick);
+			//	root.Add(LicenseTypeName, "Free");
+			//}
 			//if (Importer.IncludesImporter(container.ExportVersion)) //For now, assume true
 			{
 				root.Add(Importer.ClassName, Importer.ExportYaml(container));
