@@ -32,6 +32,36 @@ public abstract class ExportCollection : IExportCollection
 {
 	public virtual UnityGuid GUID => throw new NotSupportedException();
 
+	private static readonly Dictionary<string, int> s_md5HashedStrCount = new();
+
+	/// <summary>
+	/// Produces a deterministic GUID from <paramref name="str"/>, disambiguating repeated seeds
+	/// by appending an occurrence counter so that identical seeds still map to distinct GUIDs.
+	/// </summary>
+	protected static UnityGuid Md5HashNoRepeat(string str)
+	{
+		if (s_md5HashedStrCount.TryGetValue(str, out int count))
+		{
+			count++;
+			s_md5HashedStrCount[str] = count;
+			return UnityGuid.Md5Hash($"{str}/{count}");
+		}
+		s_md5HashedStrCount.Add(str, 0);
+		return UnityGuid.Md5Hash($"{str}/0");
+	}
+
+	/// <summary>
+	/// Clears the deterministic GUID deduplication state. Call once before each export so that
+	/// repeated exports within the same process produce identical GUIDs.
+	/// </summary>
+	public static void ResetDeterministicGuidState() => s_md5HashedStrCount.Clear();
+
+	/// <summary>
+	/// Eagerly computes and caches this collection's <see cref="GUID"/> so that the deduplication
+	/// order is locked in by the deterministic export ordering.
+	/// </summary>
+	public virtual UnityGuid GenerateGUID() => UnityGuid.Zero;
+
 	protected static void ExportMeta(IExportContainer container, Meta meta, string filePath, FileSystem fileSystem)
 	{
 		string metaPath = $"{filePath}{MetaExtension}";

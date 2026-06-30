@@ -75,7 +75,36 @@ public class AssetExportCollection<T> : ExportCollection where T : IUnityObjectB
 		return importer;
 	}
 
-	public override UnityGuid GUID { get; } = UnityGuid.NewGuid();
+	private UnityGuid m_GUID = UnityGuid.Zero;
+	public override UnityGuid GUID
+	{
+		get
+		{
+			if (m_GUID.IsZero)
+			{
+				string seed = $"{Asset.Collection.Name}/{Asset.PathID}/{Asset.ClassID}";
+				if (Asset.Collection.Name.StartsWith("Separated") || Asset.Collection.Name.StartsWith("Generated"))
+				{
+					if (!string.IsNullOrEmpty(Asset.OriginalPath))
+					{
+						seed = $"{Asset.OriginalPath}/{Asset.ClassID}";
+					}
+					else if (!string.IsNullOrEmpty(Asset.GetBestName()))
+					{
+						seed = $"{Asset.GetBestName()}/{Asset.ClassID}";
+					}
+				}
+				else if (!string.IsNullOrEmpty(Asset.OriginalPath))
+				{
+					seed = $"{Asset.OriginalPath}/{Asset.ClassID}";
+				}
+				m_GUID = Md5HashNoRepeat(seed);
+			}
+			return m_GUID;
+		}
+	}
+
+	public override UnityGuid GenerateGUID() => GUID;
 	public override IAssetExporter AssetExporter { get; }
 	public override AssetCollection File => Asset.Collection;
 	public override IEnumerable<IUnityObjectBase> Assets

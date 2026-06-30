@@ -83,6 +83,15 @@ public sealed partial class ProjectExporter
 		int exportableCount = collections.Count(c => c.Exportable);
 		int currentExportable = 0;
 
+		ExportCollection.ResetDeterministicGuidState();
+		for (int i = 0; i < collections.Count; i++)
+		{
+			if (collections[i] is ExportCollection exportCollection)
+			{
+				exportCollection.GenerateGUID();
+			}
+		}
+
 		for (int i = 0; i < collections.Count; i++)
 		{
 			IExportCollection collection = collections[i];
