@@ -1,4 +1,5 @@
 ﻿using AssetRipper.Import.Structure.Assembly;
+using AssetRipper.Import.Structure.Assembly.Managers;
 using AssetRipper.Import.Structure.Platforms;
 using AssetRipper.IO.Files;
 
@@ -64,6 +65,11 @@ internal sealed class AndroidGameStructure : PlatformGameStructure
 	{
 		base.CollectFiles(skipStreamingAssets);
 		CollectApkAssetBundles();
+	}
+
+	public bool TryLoadVirtualDlls(Action<string> requestAssemblyCallback, [NotNullWhen(true)] out MonoManager? manager)
+	{
+		return VirtualDllLoader.TryLoad(this, requestAssemblyCallback, out manager);
 	}
 
 	public static bool IsAndroidStructure(string path, FileSystem fileSystem)

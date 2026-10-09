@@ -88,6 +88,15 @@ public sealed class GameStructure : IDisposable
 	private void InitializeAssemblyManager(CoreConfiguration configuration)
 	{
 		ScriptingBackend scriptBackend = GetScriptingBackend(configuration.DisableScriptImport);
+		Logger.SendStatusChange("loading_step_load_assemblies");
+		if (!configuration.DisableScriptImport
+			&& PlatformStructure is AndroidGameStructure android
+			&& android.TryLoadVirtualDlls(OnRequestAssembly, out MonoManager? externalManager))
+		{
+			AssemblyManager = externalManager;
+			Logger.Info(LogCategory.Import, $"Files use the 'Mono' scripting backend with external DLLs instead of '{scriptBackend}'.");
+			return;
+		}
 		Logger.Info(LogCategory.Import, $"Files use the '{scriptBackend}' scripting backend.");
 
 		AssemblyManager = scriptBackend switch
@@ -96,8 +105,6 @@ public sealed class GameStructure : IDisposable
 			ScriptingBackend.IL2Cpp => new IL2CppManager(OnRequestAssembly, configuration.ImportSettings.ScriptContentLevel),
 			_ => new BaseManager(OnRequestAssembly),
 		};
-
-		Logger.SendStatusChange("loading_step_load_assemblies");
 
 		try
 		{

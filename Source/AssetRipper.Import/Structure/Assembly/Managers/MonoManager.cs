@@ -49,10 +49,7 @@ public sealed class MonoManager : BaseManager
 
 		AssemblyDefinition LoadSystemRuntimeAsMscorlib()
 		{
-			AssemblyDefinition assembly = AssemblyDefinition.FromBytes(Basic.Reference.Assemblies.Net100.ReferenceInfos.SystemRuntime.ImageBytes, createRuntimeContext: false);
-			assembly.Name = "mscorlib";
-			assembly.ManifestModule!.Name = "mscorlib.dll";
-			assembly.Version = new Version(4, 0, 0, 0);
+			AssemblyDefinition assembly = CreateSystemRuntimeAsMscorlib();
 			Add(assembly);
 			return assembly;
 		}
@@ -94,6 +91,34 @@ public sealed class MonoManager : BaseManager
 			}
 			return false;
 		}
+	}
+
+	internal void Initialize(IReadOnlyCollection<AssemblyDefinition> assemblies)
+	{
+		Debug.Assert(RuntimeContext is null);
+
+		AssemblyDefinition mscorlib = assemblies.FirstOrDefault(a => string.Equals(a.Name, "mscorlib", StringComparison.OrdinalIgnoreCase))
+			?? CreateSystemRuntimeAsMscorlib();
+		Add(mscorlib);
+
+		RuntimeContext runtimeContext = new(DotNetRuntimeInfo.NetCoreApp(10, 0), (bool?)null, mscorlib);
+		runtimeContext.AddAssembly(mscorlib);
+		foreach (AssemblyDefinition assembly in assemblies)
+		{
+			if (assembly != mscorlib)
+			{
+				Add(assembly);
+			}
+		}
+	}
+
+	private static AssemblyDefinition CreateSystemRuntimeAsMscorlib()
+	{
+		AssemblyDefinition assembly = AssemblyDefinition.FromBytes(Basic.Reference.Assemblies.Net100.ReferenceInfos.SystemRuntime.ImageBytes, createRuntimeContext: false);
+		assembly.Name = "mscorlib";
+		assembly.ManifestModule!.Name = "mscorlib.dll";
+		assembly.Version = new Version(4, 0, 0, 0);
+		return assembly;
 	}
 
 	private static bool? IsDotNetModule(string path, FileSystem fileSystem)
