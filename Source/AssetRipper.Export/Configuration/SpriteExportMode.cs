@@ -9,7 +9,8 @@ public enum SpriteExportMode
 	/// </summary>
 	Yaml,
 	/// <summary>
-	/// Export in the native asset format, where all sprites data are stored in texture importer settings.
+	/// Export sprites through texture importer settings where possible.
+	/// Cropped or rotated sprites use YAML assets to retain their original coordinate space.
 	/// </summary>
 	/// <remarks>
 	/// The output from this mode was substantially changed by

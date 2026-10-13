@@ -106,6 +106,8 @@ partial class ProjectExporter
 		OverrideExporter<IVideoClip>(new VideoClipExporter());
 
 		//Texture exporters
+		// Native Sprite is also the lossless fallback for cropped or rotated sprites.
+		OverrideExporter<ISprite>(new YamlSpriteExporter());
 		TextureAssetExporter textureExporter = new(settings);
 		OverrideExporter<ITexture2D>(textureExporter); //Texture2D and Cubemap
 		OverrideExporter<ISprite>(textureExporter);

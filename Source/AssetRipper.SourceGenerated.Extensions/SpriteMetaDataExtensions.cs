@@ -143,6 +143,15 @@ public static class SpriteMetaDataExtensions
 					instance.Weights.AddNew().CopyValues(skin[i]);
 				}
 			}
+			else if (vertices is not null && origin.Has_Bones() && origin.Bones.Count == 0)
+			{
+				// Unity's 2D importer expects an editor weight entry for every vertex, even without bones.
+				instance.Weights.EnsureCapacity(vertices.Length);
+				for (int i = 0; i < vertices.Length; i++)
+				{
+					instance.Weights.AddNew();
+				}
+			}
 		}
 	}
 

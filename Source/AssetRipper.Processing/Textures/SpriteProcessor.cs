@@ -8,8 +8,6 @@ using AssetRipper.SourceGenerated.Extensions;
 using AssetRipper.SourceGenerated.Subclasses.SecondarySpriteTexture;
 using AssetRipper.SourceGenerated.Subclasses.SpriteAtlasData;
 using AssetRipper.SourceGenerated.Subclasses.SpriteRenderData;
-using System.Drawing;
-using System.Numerics;
 
 namespace AssetRipper.Processing.Textures;
 
@@ -94,6 +92,7 @@ public sealed partial class SpriteProcessor : IAssetProcessor
 					m_RD.AlphaTexture.CopyValues(spriteData.AlphaTexture, converter);
 				}
 				m_RD.TextureRect.CopyValues(spriteData.TextureRect);
+				m_RD.TextureRectOffset.CopyValues(spriteData.TextureRectOffset);
 				if (m_RD.Has_AtlasRectOffset() && spriteData.Has_AtlasRectOffset())
 				{
 					m_RD.AtlasRectOffset.CopyValues(spriteData.AtlasRectOffset);
@@ -119,18 +118,7 @@ public sealed partial class SpriteProcessor : IAssetProcessor
 			sprite.AtlasTags?.Clear();
 		}
 
-		// Some sprite properties must be recalculated with regard to SpriteAtlas. See the comments inside the following method.
-		sprite.GetSpriteCoordinatesInAtlas(atlas, out RectangleF rect, out Vector2 pivot, out Vector4 border);
-		sprite.Rect.CopyValues(rect);
-		sprite.Pivot?.CopyValues(pivot);
-		sprite.Border?.CopyValues(border);
-
-		// Calculate and overwrite Offset. It is the offset in pixels of the pivot to the center of Rect.
-		sprite.Offset.X = (pivot.X - 0.5f) * rect.Width;
-		sprite.Offset.Y = (pivot.Y - 0.5f) * rect.Height;
-
-		// Calculate and overwrite TextureRectOffset. It is the offset in pixels of m_RD.TextureRect to Rect.
-		sprite.RD.TextureRectOffset.X = sprite.RD.TextureRect.X - rect.X;
-		sprite.RD.TextureRectOffset.Y = sprite.RD.TextureRect.Y - rect.Y;
+		// Keep the original sprite coordinate space. Texture importer metadata converts
+		// it to atlas coordinates once; native Sprite exports need the original rect and pivot.
 	}
 }
