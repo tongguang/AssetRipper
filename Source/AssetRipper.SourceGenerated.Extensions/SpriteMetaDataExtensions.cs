@@ -23,9 +23,18 @@ public static class SpriteMetaDataExtensions
 		return (SpriteAlignment)data.Alignment;
 	}
 
-	public static void FillSpriteMetaData(this ISpriteMetaData instance, ISprite sprite, ISpriteAtlas? atlas)
+	public static void FillSpriteMetaData(this ISpriteMetaData instance, ISprite sprite, ISpriteAtlas? atlas, bool originalCanvas = false)
 	{
 		sprite.GetSpriteCoordinatesInAtlas(atlas, out RectangleF rect, out Vector2 pivot, out Vector4 border);
+		if (originalCanvas)
+		{
+			Size size = sprite.GetSourceCanvasSize();
+			Vector2 sourcePivot = sprite.GetPivot();
+			rect = new RectangleF(0, 0, size.Width, size.Height);
+			// Keep the pivot on the same pixel after the canvas is rounded to whole pixels.
+			pivot = new Vector2(sourcePivot.X * sprite.Rect.Width / size.Width, sourcePivot.Y * sprite.Rect.Height / size.Height);
+			border = sprite.Has_Border() ? (Vector4)sprite.Border : default;
+		}
 		instance.Name = sprite.Name;
 		instance.Rect.CopyValues(rect);
 		instance.Alignment = (int)SpriteAlignment.Custom;
@@ -33,11 +42,11 @@ public static class SpriteMetaDataExtensions
 		instance.Border?.CopyValues(border);
 		if (instance.Has_Outline())
 		{
-			GenerateOutline(sprite, atlas, rect, pivot, instance.Outline);
+			GenerateOutline(sprite, atlas, rect, pivot, instance.Outline, !originalCanvas);
 		}
 		if (instance.Has_PhysicsShape() && sprite.Has_PhysicsShape())
 		{
-			GeneratePhysicsShape(sprite, atlas, rect, pivot, instance.PhysicsShape);
+			GeneratePhysicsShape(sprite, atlas, rect, pivot, instance.PhysicsShape, !originalCanvas);
 		}
 		instance.TessellationDetail = 0;
 		if (instance.Has_Bones() && sprite.Has_Bones() && instance.Has_SpriteID())
@@ -51,8 +60,8 @@ public static class SpriteMetaDataExtensions
 				// Set root bone position
 				if (bone.ParentId == -1)
 				{
-					bone.Position.X += sprite.Rect.Width / 2;
-					bone.Position.Y += sprite.Rect.Height / 2;
+					bone.Position.X += rect.Width * pivot.X;
+					bone.Position.Y += rect.Height * pivot.Y;
 				}
 			}
 
@@ -109,9 +118,9 @@ public static class SpriteMetaDataExtensions
 				{
 					Vector2f vertex = instance.Vertices.AddNew();
 
-					// Scale and translate vertices properly
-					vertex.X = vertices[i].X * origin.PixelsToUnits + origin.Rect.Width / 2;
-					vertex.Y = vertices[i].Y * origin.PixelsToUnits + origin.Rect.Height / 2;
+					// Vertices are relative to the pivot; the importer expects them relative to the rect origin
+					vertex.X = vertices[i].X * origin.PixelsToUnits + instance.Rect.Width * instance.Pivot.X;
+					vertex.Y = vertices[i].Y * origin.PixelsToUnits + instance.Rect.Height * instance.Pivot.Y;
 				}
 			}
 		}
@@ -160,7 +169,8 @@ public static class SpriteMetaDataExtensions
 		ISpriteAtlas? atlas,
 		RectangleF rect,
 		Vector2 pivot,
-		AssetList<AssetList<Vector2f>> shape)
+		AssetList<AssetList<Vector2f>> shape,
+		bool fixRotation = true)
 	{
 		if (sprite.Has_PhysicsShape() && sprite.PhysicsShape.Count > 0)
 		{
@@ -180,7 +190,10 @@ public static class SpriteMetaDataExtensions
 					targetList.AddNew().CopyValues(point + pivotShift);
 				}
 			}
-			shape.FixRotation(sprite, atlas);
+			if (fixRotation)
+			{
+				shape.FixRotation(sprite, atlas);
+			}
 		}
 	}
 
@@ -273,7 +286,8 @@ public static class SpriteMetaDataExtensions
 		ISpriteAtlas? atlas,
 		RectangleF rect,
 		Vector2 pivot,
-		AssetList<AssetList<Vector2f>> outlines)
+		AssetList<AssetList<Vector2f>> outlines,
+		bool fixRotation = true)
 	{
 		GenerateOutline(sprite.RD, sprite.Collection.Version, outlines);
 		float pivotShiftX = rect.Width * pivot.X - rect.Width * 0.5f;
@@ -287,7 +301,10 @@ public static class SpriteMetaDataExtensions
 				outline[i].CopyValues(point + pivotShift);
 			}
 		}
-		outlines.FixRotation(sprite, atlas);
+		if (fixRotation)
+		{
+			outlines.FixRotation(sprite, atlas);
+		}
 	}
 
 	private static void GenerateOutline(
@@ -351,6 +368,18 @@ public static class SpriteMetaDataExtensions
 	{
 		foreach (Vector2[] vectorArray in vectorArrayList)
 		{
+			// Unity's outline decomposition can crash on points or zero-area contours.
+			double area = 0;
+			for (int i = 0; i < vectorArray.Length; i++)
+			{
+				Vector2 a = vectorArray[i];
+				Vector2 b = vectorArray[(i + 1) % vectorArray.Length];
+				area += (double)a.X * b.Y - (double)b.X * a.Y;
+			}
+			if (area == 0)
+			{
+				continue;
+			}
 			AssetList<Vector2f> assetList = instance.AddNew();
 			assetList.Capacity = vectorArray.Length;
 			foreach (Vector2 v in vectorArray)

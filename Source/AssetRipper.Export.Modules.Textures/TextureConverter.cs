@@ -141,7 +141,7 @@ public static class TextureConverter
 		return true;
 	}
 
-	public static bool TryConvertToBitmap(ITexture2D texture, out DirectBitmap bitmap)
+	public static bool TryConvertToBitmap(ITexture2D texture, out DirectBitmap bitmap, bool rgba32 = false)
 	{
 		byte[] buffer = texture.GetImageData();
 		if (buffer.Length == 0)
@@ -160,7 +160,8 @@ public static class TextureConverter
 			Version = texture.Collection.Version,
 		};
 
-		if (!TryConvertToBitmap(options, buffer, out bitmap))
+		if (!(rgba32 ? TryConvertToBitmap<ColorRGBA<byte>, byte>(options, buffer, out bitmap)
+			: TryConvertToBitmap(options, buffer, out bitmap)))
 		{
 			return false;
 		}

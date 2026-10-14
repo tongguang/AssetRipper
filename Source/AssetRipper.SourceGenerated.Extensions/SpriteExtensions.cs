@@ -40,18 +40,7 @@ public static class SpriteExtensions
 		Vector2 sizeDelta = sprite.Rect.Size() - sAtlasRect.Size();
 		Vector2 cropTopRight = new Vector2(sizeDelta.X - cropBotLeft.X, sizeDelta.Y - cropBotLeft.Y);
 
-		Vector2 pivot;
-		if (sprite.Has_Pivot())
-		{
-			pivot = (Vector2)sprite.Pivot;
-		}
-		else
-		{
-			Vector2 center = new Vector2(sprite.Rect.Size().X / 2.0f, sprite.Rect.Size().Y / 2.0f);
-			Vector2 pivotOffset = center + (Vector2)sprite.Offset;
-			pivot = new Vector2(pivotOffset.X / sprite.Rect.Size().X, pivotOffset.Y / sprite.Rect.Size().Y);
-		}
-
+		Vector2 pivot = sprite.GetPivot();
 		Vector2 pivotPosition = new Vector2(pivot.X * sprite.Rect.Size().X, pivot.Y * sprite.Rect.Size().Y);
 		Vector2 aAtlasPivotPosition = pivotPosition - cropBotLeft;
 		sAtlasPivot = new Vector2(aAtlasPivotPosition.X / sAtlasRect.Size().X, aAtlasPivotPosition.Y / sAtlasRect.Size().Y);
@@ -68,6 +57,27 @@ public static class SpriteExtensions
 		{
 			sAtlasBorder = default;
 		}
+	}
+
+	/// <summary>
+	/// Normalized pivot in the sprite's original rect. Versions without m_Pivot store it as an offset from the rect center.
+	/// </summary>
+	public static Vector2 GetPivot(this ISprite sprite)
+	{
+		if (sprite.Has_Pivot())
+		{
+			return (Vector2)sprite.Pivot;
+		}
+		Vector2 size = sprite.Rect.Size();
+		return (size / 2.0f + (Vector2)sprite.Offset) / size;
+	}
+
+	/// <summary>
+	/// Whole-pixel size of the sprite's original canvas, shared by the restored image and its importer metadata.
+	/// </summary>
+	public static Size GetSourceCanvasSize(this ISprite sprite)
+	{
+		return new Size((int)Math.Round(sprite.Rect.Width), (int)Math.Round(sprite.Rect.Height));
 	}
 
 	public static ITexture2D? TryGetTexture(this ISprite sprite)

@@ -21,12 +21,17 @@ public class TextureAssetExporter : BinaryAssetExporter
 	{
 		// A texture importer cannot represent an original rect extending outside a
 		// packed texture rect. Export the native Sprite instead of discarding its padding.
-		return ExportSprites
-			&& sprite.Rect.Width == sprite.RD.TextureRect.Width
-			&& sprite.Rect.Height == sprite.RD.TextureRect.Height
-			&& sprite.RD.TextureRectOffset.X == 0
-			&& sprite.RD.TextureRectOffset.Y == 0
-			&& sprite.RD.PackingRotation == SpritePackingRotation.None;
+		// Tolerate float noise such as 200.00003 in serialized rects.
+		static bool Near(float a, float b) => MathF.Abs(a - b) < .001f;
+		return Near(sprite.Rect.Width, sprite.RD.TextureRect.Width)
+			&& Near(sprite.Rect.Height, sprite.RD.TextureRect.Height)
+			&& Near(sprite.RD.TextureRectOffset.X, 0)
+			&& Near(sprite.RD.TextureRectOffset.Y, 0)
+			&& sprite.RD.PackingRotation == SpritePackingRotation.None
+			&& (sprite.MainAsset is not SpriteInformationObject info
+				|| info.Sprites.Keys.Select(s => s.PixelsToUnits).Distinct().Count() <= 1)
+			// All sprites of a repacked atlas are restored, so Unity never packs from the old atlas texture.
+			&& !(SpriteExportMode is SpriteExportMode.SourceImage && SourceSpriteAtlasExporter.CanRepack(sprite));
 	}
 
 	public TextureAssetExporter(FullConfiguration configuration)
@@ -39,7 +44,7 @@ public class TextureAssetExporter : BinaryAssetExporter
 	public override bool TryCreateCollection(IUnityObjectBase asset, [NotNullWhen(true)] out IExportCollection? exportCollection)
 	{
 		if (asset.MainAsset is SpriteInformationObject spriteInformationObject
-			&& (asset is not ISprite sprite || CanExportSpriteAsTexture(sprite)))
+			&& (asset is not ISprite sprite || ExportSprites && CanExportSpriteAsTexture(sprite)))
 		{
 			exportCollection = new TextureExportCollection(this, spriteInformationObject, ExportSprites);
 			return true;

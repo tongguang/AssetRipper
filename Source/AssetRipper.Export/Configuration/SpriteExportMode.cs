@@ -27,4 +27,9 @@ public enum SpriteExportMode
 	/// Using this is inadvisable.
 	/// </remarks>
 	Texture2D,
+	/// <summary>
+	/// Restore packed sprites to full-canvas source images and export editable SpriteAtlases that Unity repacks.
+	/// Sprites that cannot be restored fall back to <see cref="Native"/>.
+	/// </summary>
+	SourceImage,
 }

@@ -236,6 +236,8 @@
     "sprite_export_title": "Sprite Export Format",
     "sprite_format_native": "Unity",
     "sprite_format_native_description": "Export in the Unity sprite format. Cannot be viewed outside of Unity.",
+    "sprite_format_source_image": "Source Image",
+    "sprite_format_source_image_description": "Restore packed sprites to full-size source images and export editable sprite atlases that Unity repacks. Sprites that cannot be restored use the Unity sprite format.",
     "sprite_format_texture": "Texture",
     "sprite_format_texture_description": "Export as an image of the sprite sheet. Can be viewed outside of Unity, but slower to export.",
     "sprite_format_yaml": "Yaml",

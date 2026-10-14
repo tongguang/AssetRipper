@@ -13,6 +13,7 @@ public sealed class SpriteExportModeDropDownSetting : DropDownSetting<SpriteExpo
 		SpriteExportMode.Yaml => Localization.SpriteFormatYaml,
 		SpriteExportMode.Native => Localization.SpriteFormatNative,
 		SpriteExportMode.Texture2D => Localization.SpriteFormatTexture,
+		SpriteExportMode.SourceImage => Localization.SpriteFormatSourceImage,
 		_ => base.GetDisplayName(value),
 	};
 
@@ -21,6 +22,7 @@ public sealed class SpriteExportModeDropDownSetting : DropDownSetting<SpriteExpo
 		SpriteExportMode.Yaml => Localization.SpriteFormatYamlDescription,
 		SpriteExportMode.Native => Localization.SpriteFormatNativeDescription,
 		SpriteExportMode.Texture2D => Localization.SpriteFormatTextureDescription,
+		SpriteExportMode.SourceImage => Localization.SpriteFormatSourceImageDescription,
 		_ => base.GetDescription(value),
 	};
 }

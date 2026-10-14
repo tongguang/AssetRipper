@@ -22,7 +22,7 @@ public class TextureExportCollection : AssetsExportCollection<ITexture2D>
 	{
 		m_exportSprites = exportSprites;
 		m_spriteInformation = spriteInformationObject.Sprites
-			.Where(pair => assetExporter.CanExportSpriteAsTexture(pair.Key))
+			.Where(pair => !exportSprites || assetExporter.CanExportSpriteAsTexture(pair.Key))
 			.ToDictionary();
 
 		if (exportSprites && m_spriteInformation.Count > 0)
