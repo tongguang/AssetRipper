@@ -29,10 +29,9 @@ public static class SpriteMetaDataExtensions
 		if (originalCanvas)
 		{
 			Size size = sprite.GetSourceCanvasSize();
-			Vector2 sourcePivot = sprite.GetPivot();
 			rect = new RectangleF(0, 0, size.Width, size.Height);
-			// Keep the pivot on the same pixel after the canvas is rounded to whole pixels.
-			pivot = new Vector2(sourcePivot.X * sprite.Rect.Width / size.Width, sourcePivot.Y * sprite.Rect.Height / size.Height);
+			// Keep the pivot on the same pixel after the canvas is rounded to whole pixels and the content is shifted onto whole texels.
+			pivot = (sprite.GetPivot() * sprite.Rect.Size() + sprite.GetSourceImageMapping().Shift) / new Vector2(size.Width, size.Height);
 			border = sprite.Has_Border() ? (Vector4)sprite.Border : default;
 		}
 		instance.Name = sprite.Name;

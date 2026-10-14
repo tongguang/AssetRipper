@@ -4,9 +4,12 @@ using AssetRipper.Export.UnityProjects.Project;
 using AssetRipper.Processing.Textures;
 using AssetRipper.SourceGenerated.Classes.ClassID_0;
 using AssetRipper.SourceGenerated.Classes.ClassID_213;
+using AssetRipper.SourceGenerated.Classes.ClassID_28;
 using AssetRipper.SourceGenerated.Classes.ClassID_687078895;
+using AssetRipper.SourceGenerated.Enums;
 using AssetRipper.SourceGenerated.Extensions;
 using AssetRipper.SourceGenerated.Subclasses.PPtr_Object;
+using AssetRipper.SourceGenerated.Subclasses.TextureImporterPlatformSettings;
 
 namespace AssetRipper.Export.UnityProjects.Textures;
 
@@ -42,10 +45,27 @@ public sealed class SourceSpriteAtlasExporter : YamlExporterBase
 		{
 			packing.EnableRotation = false;
 			packing.EnableTightPacking = false;
+			// Restored images keep the original colors of transparent edge texels, which bilinear sampling blends in.
+			packing.EnableAlphaDilation = false;
+		}
+		// The packed texture is the only record of how the original atlas was sampled.
+		if (atlas.RenderDataMap.Values.FirstOrDefault()?.Texture.TryGetAsset(atlas.Collection) is ITexture2D texture)
+		{
+			atlas.EditorData.TextureSettings.FilterMode = texture.TextureSettings_C28.FilterMode;
+			atlas.EditorData.TextureSettings.SetAnisoLevel(texture.TextureSettings_C28.Aniso);
+			atlas.EditorData.TextureSettings.SetSRGB(texture.ColorSpace_C28E == ColorSpace.Linear);
 		}
 		atlas.EditorData.TextureSettings.TextureCompression = 0;
 		atlas.EditorData.TextureSettings.SetGenerateMipMaps(false);
 		atlas.EditorData.TextureSettings.SetMaxTextureSize(4096);
+		// Unity takes the atlas format from the default platform; without one it compresses the repacked atlas.
+		atlas.EditorData.PlatformSettings.Clear();
+		ITextureImporterPlatformSettings platform = atlas.EditorData.PlatformSettings.AddNew();
+		platform.BuildTarget = "DefaultTexturePlatform";
+		platform.MaxTextureSize = 4096;
+		platform.Format = (int)TextureImporterFormat.Automatic;
+		platform.TextureCompression = (int)TextureImporterCompression.Uncompressed;
+		platform.CompressionQuality = 50;
 		atlas.PackedSprites!.Clear();
 		atlas.PackedSpriteNamesToIndex?.Clear();
 		atlas.RenderDataMap.Clear();

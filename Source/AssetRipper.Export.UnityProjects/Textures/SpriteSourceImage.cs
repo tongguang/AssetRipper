@@ -16,36 +16,15 @@ public static class SpriteSourceImage
 		int width = canvas.Width;
 		int height = canvas.Height;
 		var restored = new DirectBitmap<ColorRGBA<byte>, byte>(width, height);
-		Vector2 pivot = sprite.GetPivot() * sprite.Rect.Size();
-		float scaleX = 1, scaleY = 1;
-		float offsetX = sprite.RD.TextureRect.X - sprite.RD.TextureRectOffset.X;
-		float offsetY = sprite.RD.TextureRect.Y - sprite.RD.TextureRectOffset.Y;
-		if (sprite.RD.Has_UvTransform())
-		{
-			// UvTransform also carries the atlas scale; older versions are always packed 1:1.
-			scaleX = sprite.RD.UvTransform.X / sprite.PixelsToUnits;
-			scaleY = sprite.RD.UvTransform.Z / sprite.PixelsToUnits;
-			offsetX = sprite.RD.UvTransform.Y - pivot.X * scaleX;
-			offsetY = sprite.RD.UvTransform.W - pivot.Y * scaleY;
-		}
-		if (sprite.RD.PackingRotation is SpritePackingRotation.FlipHorizontal or SpritePackingRotation.Rotate180)
-		{
-			scaleX = -scaleX;
-			offsetX = 2 * sprite.RD.TextureRect.X + sprite.RD.TextureRect.Width - offsetX;
-		}
-		if (sprite.RD.PackingRotation is SpritePackingRotation.FlipVertical or SpritePackingRotation.Rotate180)
-		{
-			scaleY = -scaleY;
-			offsetY = 2 * sprite.RD.TextureRect.Y + sprite.RD.TextureRect.Height - offsetY;
-		}
-		bool[] mask = GetMask(sprite, width, height, pivot);
+		(Vector2 scale, Vector2 offset, Vector2 shift) = sprite.GetSourceImageMapping();
+		bool[] mask = GetMask(sprite, width, height, sprite.GetPivot() * sprite.Rect.Size() + shift);
 		for (int y = 0; y < height; y++)
 		{
 			for (int x = 0; x < width; x++)
 			{
 				if (!mask[y * width + x]) continue;
-				double sx = (x + 0.5) * scaleX + offsetX - 0.5;
-				double sy = (y + 0.5) * scaleY + offsetY - 0.5;
+				double sx = (x + 0.5) * scale.X + offset.X - 0.5;
+				double sy = (y + 0.5) * scale.Y + offset.Y - 0.5;
 				int destination = ((height - 1 - y) * width + x) * 4;
 				Sample(packed, sx, sy, restored.Bits.Slice(destination, 4));
 			}

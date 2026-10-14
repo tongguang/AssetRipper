@@ -1,4 +1,4 @@
-using AssetRipper.Assets.Bundles;
+﻿using AssetRipper.Assets.Bundles;
 using AssetRipper.Assets.Collections;
 using AssetRipper.Export.Configuration;
 using AssetRipper.Export.Modules.Textures;
@@ -6,6 +6,7 @@ using AssetRipper.Export.UnityProjects;
 using AssetRipper.Export.UnityProjects.Textures;
 using AssetRipper.IO.Files;
 using AssetRipper.Import.Structure.Assembly.Managers;
+using AssetRipper.Numerics;
 using AssetRipper.Primitives;
 using AssetRipper.Processing;
 using AssetRipper.Processing.Textures;
@@ -15,7 +16,9 @@ using AssetRipper.SourceGenerated.Classes.ClassID_687078895;
 using AssetRipper.SourceGenerated.Enums;
 using AssetRipper.SourceGenerated.Extensions;
 using AssetRipper.SourceGenerated.Subclasses.SpriteMetaData;
+using AssetRipper.SourceGenerated.Subclasses.TextureImporterPlatformSettings;
 using AssetRipper.TextureDecoder.Rgb.Formats;
+using System.Numerics;
 
 namespace AssetRipper.Tests;
 
@@ -97,6 +100,41 @@ internal class SpriteExportTests
 				int expectedY = 1 + (flipY ? 1 - y : y);
 				Assert.That(restored.Bits[((1 - y) * 3 + x) * 4], Is.EqualTo(expectedX + 10 * expectedY));
 			}
+		}
+	}
+
+	[Test]
+	public void FlippedSpriteBetweenTexelsIsShiftedInsteadOfResampled()
+	{
+		// Flipping a 2.9 px wide packed rect samples the atlas at u = 4.9 - x, between texels.
+		ProcessedAssetCollection collection = AssetCreator.CreateCollection(new UnityVersion(2022, 3));
+		ISprite sprite = collection.CreateSprite();
+		sprite.Rect.Width = 4;
+		sprite.Rect.Height = 1;
+		sprite.Pivot!.SetValues(0, 0);
+		sprite.PixelsToUnits = 100;
+		sprite.RD.TextureRect.X = 2;
+		sprite.RD.TextureRect.Width = 2.9f;
+		sprite.RD.TextureRect.Height = 1;
+		sprite.RD.UvTransform!.SetValues(100, 2, 100, 0);
+		sprite.RD.SettingsRaw = 1u | ((uint)SpritePackingRotation.FlipHorizontal << 2);
+		var packed = new DirectBitmap<ColorRGBA<byte>, byte>(8, 1);
+		for (int x = 0; x < 8; x++)
+		{
+			packed.Bits[x * 4] = (byte)(10 * x);
+			packed.Bits[x * 4 + 3] = 255;
+		}
+		var restored = SpriteSourceImage.Restore(sprite, packed);
+		ISpriteMetaData metadata = SpriteMetaData.Create(collection.Version);
+		metadata.FillSpriteMetaData(sprite, null, originalCanvas: true);
+		using (Assert.EnterMultipleScope())
+		{
+			// Every pixel is an untouched texel; the 0.1 px remainder moves to the pivot.
+			for (int x = 0; x < 4; x++)
+			{
+				Assert.That(restored.Bits[x * 4], Is.EqualTo(10 * (4 - x)));
+			}
+			Assert.That(metadata.Pivot.X, Is.EqualTo(.1f / 4).Within(1e-5));
 		}
 	}
 
@@ -314,6 +352,9 @@ internal class SpriteExportTests
 		atlas.ConvertToEditorFormat(); // EditorFormatProcessor
 		new SpriteProcessor().Process(CreateGameData(collection));
 		Assert.That(new SourceSpriteAtlasExporter().TryCreateCollection(atlas, out _), Is.True);
+		ITexture2D texture = (ITexture2D)atlas.RenderDataMap.Values.First().Texture.TryGetAsset(collection)!;
+		texture.TextureSettings_C28.FilterMode = (int)FilterMode_0.Point;
+		texture.ColorSpace_C28 = (int)ColorSpace.Gamma;
 		SourceSpriteAtlasExporter.PrepareForRepacking(atlas);
 		SourceSpriteAtlasExporter.PrepareForRepacking(atlas);
 		using (Assert.EnterMultipleScope())
@@ -327,6 +368,13 @@ internal class SpriteExportTests
 			Assert.That(atlas.RenderDataMap.Count, Is.Zero);
 			Assert.That(atlas.EditorData.PackingSettings!.EnableRotation, Is.False);
 			Assert.That(atlas.EditorData.PackingSettings.EnableTightPacking, Is.False);
+			Assert.That(atlas.EditorData.PackingSettings.EnableAlphaDilation, Is.False);
+			ITextureImporterPlatformSettings platform = atlas.EditorData.PlatformSettings!.Single();
+			Assert.That(platform.BuildTarget.String, Is.EqualTo("DefaultTexturePlatform"));
+			Assert.That(platform.TextureCompression, Is.Zero);
+			// The repacked atlas samples like the original one.
+			Assert.That(atlas.EditorData.TextureSettings.FilterMode, Is.EqualTo((int)FilterMode_0.Point));
+			Assert.That(atlas.EditorData.TextureSettings.GetSRGB(), Is.False);
 			Assert.That(sprite.TryGetTexture(), Is.Not.Null);
 			Assert.That(new SourceSpriteExporter().TryCreateCollection(sprite, out _), Is.True);
 		}
@@ -373,6 +421,20 @@ internal class SpriteExportTests
 			Assert.That(metadata.Vertices!.Count, Is.EqualTo(3));
 			Assert.That(metadata.Indices!.Count, Is.EqualTo(3));
 		}
+	}
+
+	[Test]
+	public void OutlineKeepsOuterContourAndHole()
+	{
+		// A 3x3 square ring around a 1x1 hole.
+		Vector3[] vertices = [new(0, 0, 0), new(3, 0, 0), new(3, 3, 0), new(0, 3, 0), new(1, 1, 0), new(2, 1, 0), new(2, 2, 0), new(1, 2, 0)];
+		Vector3i[] triangles = [new(0, 1, 5), new(0, 5, 4), new(1, 2, 6), new(1, 6, 5), new(2, 3, 7), new(2, 7, 6), new(3, 0, 4), new(3, 4, 7)];
+		List<Vector2[]> outlines = new MeshOutlineGenerator(vertices, triangles).GenerateOutlines();
+		Assert.That(outlines.Select(o => o.Select(v => (v.X, v.Y)).Order().ToArray()), Is.EquivalentTo(new[]
+		{
+			new (float, float)[] { (0, 0), (0, 3), (3, 0), (3, 3) },
+			new (float, float)[] { (1, 1), (1, 2), (2, 1), (2, 2) },
+		}));
 	}
 
 	private static (ProcessedAssetCollection, ISprite, ISpriteAtlas) CreateSprite(float pivotX, float pivotY)
