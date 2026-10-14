@@ -63,7 +63,8 @@ public static class SpriteSourceImage
 		double fy = y - iy;
 		if (Math.Abs(fx) < .003 && Math.Abs(fy) < .003)
 		{
-			if ((uint)ix < packed.Width && (uint)iy < packed.Height)
+			// Restored padding can fall outside the atlas; the project is compiled with overflow checks, so no uint trick.
+			if (ix >= 0 && ix < packed.Width && iy >= 0 && iy < packed.Height)
 				packed.Bits.Slice(((packed.Height - 1 - iy) * packed.Width + ix) * 4, 4).CopyTo(destination);
 			return;
 		}

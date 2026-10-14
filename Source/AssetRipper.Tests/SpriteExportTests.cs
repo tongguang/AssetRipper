@@ -260,6 +260,29 @@ internal class SpriteExportTests
 	}
 
 	[Test]
+	public void PaddingOutsideAtlasStaysTransparent()
+	{
+		ProcessedAssetCollection collection = AssetCreator.CreateCollection(new UnityVersion(2022, 3));
+		ISprite sprite = collection.CreateSprite();
+		sprite.Rect.Width = 4;
+		sprite.Rect.Height = 2;
+		sprite.Pivot!.SetValues(0, 0);
+		sprite.PixelsToUnits = 1;
+		sprite.RD.TextureRect.Width = 2;
+		sprite.RD.TextureRect.Height = 2;
+		// The canvas starts two pixels left of the atlas edge, like a sprite trimmed against x = 0.
+		sprite.RD.UvTransform!.SetValues(1, -2, 1, 0);
+		var packed = new DirectBitmap<ColorRGBA<byte>, byte>(2, 2);
+		packed.Bits.Fill(255);
+		var restored = SpriteSourceImage.Restore(sprite, packed);
+		using (Assert.EnterMultipleScope())
+		{
+			Assert.That(restored.Bits[0 * 4 + 3], Is.Zero);
+			Assert.That(restored.Bits[3 * 4 + 3], Is.EqualTo(255));
+		}
+	}
+
+	[Test]
 	public void DegenerateTriangleMasksNoPixels()
 	{
 		ProcessedAssetCollection collection = AssetCreator.CreateCollection(new UnityVersion(2022, 3));
