@@ -16,6 +16,8 @@ namespace AssetRipper.Export.UnityProjects.Textures;
 /// <summary>Exports editable atlases that Unity packs from the restored source sprites.</summary>
 public sealed class SourceSpriteAtlasExporter : YamlExporterBase
 {
+	private const string DefaultPlatform = "DefaultTexturePlatform";
+
 	public override bool TryCreateCollection(IUnityObjectBase asset, [NotNullWhen(true)] out IExportCollection? exportCollection)
 	{
 		if (asset is ISpriteAtlas atlas && CanRepack(atlas))
@@ -48,24 +50,34 @@ public sealed class SourceSpriteAtlasExporter : YamlExporterBase
 			// Restored images keep the original colors of transparent edge texels, which bilinear sampling blends in.
 			packing.EnableAlphaDilation = false;
 		}
-		// The packed texture is the only record of how the original atlas was sampled.
+		// Repeated exports find the packed texture already removed and keep the decision of the first one.
+		TextureImporterCompression compression = atlas.EditorData.PlatformSettings?
+			.FirstOrDefault(p => p.BuildTarget.String == DefaultPlatform) is { } previous
+			? (TextureImporterCompression)previous.TextureCompression
+			: TextureImporterCompression.Uncompressed;
+		// The packed texture is the only record of how the original atlas was sampled and stored.
 		if (atlas.RenderDataMap.Values.FirstOrDefault()?.Texture.TryGetAsset(atlas.Collection) is ITexture2D texture)
 		{
 			atlas.EditorData.TextureSettings.FilterMode = texture.TextureSettings_C28.FilterMode;
 			atlas.EditorData.TextureSettings.SetAnisoLevel(texture.TextureSettings_C28.Aniso);
 			atlas.EditorData.TextureSettings.SetSRGB(texture.ColorSpace_C28E == ColorSpace.Linear);
+			// Recompressing an uncompressed atlas would lose detail; an already compressed one gains nothing from staying raw.
+			compression = texture.Format_C28E.IsRgb() ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
 		}
-		atlas.EditorData.TextureSettings.TextureCompression = 0;
+		atlas.EditorData.TextureSettings.SetTextureCompression(compression);
 		atlas.EditorData.TextureSettings.SetGenerateMipMaps(false);
 		atlas.EditorData.TextureSettings.SetMaxTextureSize(4096);
 		// Unity takes the atlas format from the default platform; without one it compresses the repacked atlas.
-		atlas.EditorData.PlatformSettings.Clear();
-		ITextureImporterPlatformSettings platform = atlas.EditorData.PlatformSettings.AddNew();
-		platform.BuildTarget = "DefaultTexturePlatform";
-		platform.MaxTextureSize = 4096;
-		platform.Format = (int)TextureImporterFormat.Automatic;
-		platform.TextureCompression = (int)TextureImporterCompression.Uncompressed;
-		platform.CompressionQuality = 50;
+		if (atlas.EditorData.PlatformSettings is { } platforms)
+		{
+			platforms.Clear();
+			ITextureImporterPlatformSettings platform = platforms.AddNew();
+			platform.BuildTarget = DefaultPlatform;
+			platform.MaxTextureSize = 4096;
+			platform.Format = (int)TextureImporterFormat.Automatic;
+			platform.TextureCompression = (int)compression;
+			platform.CompressionQuality = 50;
+		}
 		atlas.PackedSprites!.Clear();
 		atlas.PackedSpriteNamesToIndex?.Clear();
 		atlas.RenderDataMap.Clear();

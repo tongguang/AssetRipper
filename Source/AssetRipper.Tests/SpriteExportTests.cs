@@ -345,8 +345,9 @@ internal class SpriteExportTests
 		Assert.That(restored.Bits.ToArray(), Is.All.Zero);
 	}
 
-	[Test]
-	public void SourceAtlasKeepsPackablesAndRemovesBakedCache()
+	[TestCase(TextureFormat.RGBA32, TextureImporterCompression.Uncompressed)]
+	[TestCase(TextureFormat.DXT5, TextureImporterCompression.CompressedHQ)]
+	public void SourceAtlasKeepsPackablesAndRemovesBakedCache(TextureFormat format, TextureImporterCompression compression)
 	{
 		(ProcessedAssetCollection collection, ISprite sprite, ISpriteAtlas atlas) = CreateSprite(.2f, .8f);
 		atlas.ConvertToEditorFormat(); // EditorFormatProcessor
@@ -355,6 +356,7 @@ internal class SpriteExportTests
 		ITexture2D texture = (ITexture2D)atlas.RenderDataMap.Values.First().Texture.TryGetAsset(collection)!;
 		texture.TextureSettings_C28.FilterMode = (int)FilterMode_0.Point;
 		texture.ColorSpace_C28 = (int)ColorSpace.Gamma;
+		texture.Format_C28 = (int)format;
 		SourceSpriteAtlasExporter.PrepareForRepacking(atlas);
 		SourceSpriteAtlasExporter.PrepareForRepacking(atlas);
 		using (Assert.EnterMultipleScope())
@@ -371,8 +373,8 @@ internal class SpriteExportTests
 			Assert.That(atlas.EditorData.PackingSettings.EnableAlphaDilation, Is.False);
 			ITextureImporterPlatformSettings platform = atlas.EditorData.PlatformSettings!.Single();
 			Assert.That(platform.BuildTarget.String, Is.EqualTo("DefaultTexturePlatform"));
-			Assert.That(platform.TextureCompression, Is.Zero);
-			// The repacked atlas samples like the original one.
+			Assert.That(platform.TextureCompression, Is.EqualTo((int)compression));
+			// The repacked atlas samples and compresses like the original one.
 			Assert.That(atlas.EditorData.TextureSettings.FilterMode, Is.EqualTo((int)FilterMode_0.Point));
 			Assert.That(atlas.EditorData.TextureSettings.GetSRGB(), Is.False);
 			Assert.That(sprite.TryGetTexture(), Is.Not.Null);
