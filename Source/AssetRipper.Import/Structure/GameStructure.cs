@@ -77,7 +77,8 @@ public sealed class GameStructure : IDisposable
 			filePaths = PlatformStructure.Files.Union(MixedStructure.Files).Select(pair => pair.Value);
 		}
 
-		FileCollection = GameBundle.FromPaths(
+		FileCollection = new GameBundle();
+		FileCollection.InitializeFromPaths(
 			filePaths,
 			assetFactory,
 			FileSystem,

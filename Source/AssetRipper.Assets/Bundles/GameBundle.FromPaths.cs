@@ -11,25 +11,32 @@ namespace AssetRipper.Assets.Bundles;
 partial class GameBundle
 {
 	/// <summary>
-	/// Create and initialize a <see cref="GameBundle"/> from a set of paths.
+	/// Initialize a <see cref="GameBundle"/> from a set of paths.
 	/// </summary>
 	/// <param name="paths">The set of paths to load.</param>
 	/// <param name="assetFactory">The factory for reading assets.</param>
 	/// <param name="dependencyProvider"></param>
 	/// <param name="resourceProvider"></param>
 	/// <param name="defaultVersion">The default version to use if a file does not have a version, ie the version has been stripped.</param>
-	public static GameBundle FromPaths(IEnumerable<string> paths, AssetFactoryBase assetFactory, FileSystem fileSystem, IGameInitializer? initializer = null)
+	public void InitializeFromPaths(IEnumerable<string> paths, AssetFactoryBase assetFactory, FileSystem fileSystem, IGameInitializer? initializer = null)
 	{
-		GameBundle gameBundle = new();
-		initializer?.OnCreated(gameBundle, assetFactory);
-		gameBundle.InitializeFromPaths(paths, assetFactory, fileSystem, initializer);
-		initializer?.OnPathsLoaded(gameBundle, assetFactory);
-		gameBundle.InitializeAllDependencyLists(initializer?.DependencyProvider);
-		initializer?.OnDependenciesInitialized(gameBundle, assetFactory);
-		return gameBundle;
+		ThrowIfAlreadyInitialized();
+		initializer?.OnCreated(this, assetFactory);
+		InitializeFiles(paths, assetFactory, fileSystem, initializer);
+		initializer?.OnPathsLoaded(this, assetFactory);
+		InitializeAllDependencyLists(initializer?.DependencyProvider);
+		initializer?.OnDependenciesInitialized(this, assetFactory);
 	}
 
-	private void InitializeFromPaths(IEnumerable<string> paths, AssetFactoryBase assetFactory, FileSystem fileSystem, IGameInitializer? initializer)
+	private void ThrowIfAlreadyInitialized()
+	{
+		if (Bundles.Count > 0 || Resources.Count > 0 || Collections.Count > 0 || FailedFiles.Count > 0)
+		{
+			throw new InvalidOperationException("GameBundle has already been initialized.");
+		}
+	}
+
+	private void InitializeFiles(IEnumerable<string> paths, AssetFactoryBase assetFactory, FileSystem fileSystem, IGameInitializer? initializer)
 	{
 		ResourceProvider = initializer?.ResourceProvider;
 		List<FileBase> fileStack = LoadFilesAndDependencies(paths, fileSystem, initializer?.DependencyProvider);
